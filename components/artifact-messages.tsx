@@ -16,6 +16,7 @@ type ArtifactMessagesProps = {
   messages: ChatMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
+  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
   isReadonly: boolean;
   artifactStatus: UIArtifact["status"];
 };
@@ -28,6 +29,7 @@ function PureArtifactMessages({
   messages,
   setMessages,
   regenerate,
+  sendMessage,
   isReadonly,
 }: ArtifactMessagesProps) {
   const {
@@ -50,6 +52,7 @@ function PureArtifactMessages({
           addToolApprovalResponse={addToolApprovalResponse}
           chatId={chatId}
           isLoading={status === "streaming" && index === messages.length - 1}
+          isLastMessage={index === messages.length - 1}
           isReadonly={isReadonly}
           key={message.id}
           message={message}
@@ -57,7 +60,9 @@ function PureArtifactMessages({
           requiresScrollPadding={
             hasSentMessage && index === messages.length - 1
           }
+          sendMessage={sendMessage}
           setMessages={setMessages}
+          status={status}
           vote={
             votes
               ? votes.find((vote) => vote.messageId === message.id)
