@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+import { useLocalStorage } from "usehooks-ts";
 import { ChatHeader } from "@/components/chat-header";
+import type { WatchGuardVersion } from "@/lib/ai/prompts";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +32,7 @@ import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
 import { toast } from "./toast";
+import { WatchBackground } from "./watch-guard/watch-background";
 import type { VisibilityType } from "./visibility-selector";
 
 export function Chat({
@@ -39,6 +42,7 @@ export function Chat({
   initialVisibilityType,
   isReadonly,
   autoResume,
+  watchGuardVersion: initialWatchGuardVersion,
 }: {
   id: string;
   initialMessages: ChatMessage[];
@@ -46,6 +50,7 @@ export function Chat({
   initialVisibilityType: VisibilityType;
   isReadonly: boolean;
   autoResume: boolean;
+  watchGuardVersion?: WatchGuardVersion;
 }) {
   const router = useRouter();
 
@@ -72,6 +77,13 @@ export function Chat({
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
   const [currentModelId, setCurrentModelId] = useState(initialChatModel);
   const currentModelIdRef = useRef(currentModelId);
+  // Use prop if provided, otherwise fall back to localStorage
+  const watchGuardVersion = initialWatchGuardVersion || "mvp";
+  const watchGuardVersionRef = useRef(watchGuardVersion);
+
+  useEffect(() => {
+    watchGuardVersionRef.current = watchGuardVersion;
+  }, [watchGuardVersion]);
 
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
@@ -126,6 +138,7 @@ export function Chat({
               : { message: lastMessage }),
             selectedChatModel: currentModelIdRef.current,
             selectedVisibilityType: visibilityType,
+            watchGuardVersion: watchGuardVersionRef.current,
             ...request.body,
           },
         };
@@ -187,7 +200,10 @@ export function Chat({
 
   return (
     <>
-      <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">
+      <div className="overscroll-behavior-contain relative flex h-dvh min-w-0 touch-pan-y flex-col bg-background">
+        {/* Background abstract watch illustrations - dimmed when chat is active */}
+        <WatchBackground isChatActive={messages.length > 0} />
+
         <ChatHeader
           chatId={id}
           isReadonly={isReadonly}
@@ -202,12 +218,13 @@ export function Chat({
           messages={messages}
           regenerate={regenerate}
           selectedModelId={initialChatModel}
+          sendMessage={sendMessage}
           setMessages={setMessages}
           status={status}
           votes={votes}
         />
 
-        <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
+        <div className="sticky bottom-0 z-10 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
           {!isReadonly && (
             <MultimodalInput
               attachments={attachments}

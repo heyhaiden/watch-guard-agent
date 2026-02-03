@@ -29,7 +29,7 @@ async function NewChatPage() {
           initialVisibilityType="private"
           isReadonly={false}
           key={id}
-          watchGuardVersion="mvp"
+          watchGuardVersion="refined"
         />
         <DataStreamHandler />
       </>
@@ -46,7 +46,7 @@ async function NewChatPage() {
         initialVisibilityType="private"
         isReadonly={false}
         key={id}
-        watchGuardVersion="mvp"
+        watchGuardVersion="refined"
       />
       <DataStreamHandler />
     </>

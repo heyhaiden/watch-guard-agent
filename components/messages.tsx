@@ -1,5 +1,6 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { ArrowDownIcon } from "lucide-react";
+import { useEffect } from "react";
 import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
@@ -15,6 +16,7 @@ type MessagesProps = {
   messages: ChatMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
+  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
   isReadonly: boolean;
   isArtifactVisible: boolean;
   selectedModelId: string;
@@ -28,6 +30,7 @@ function PureMessages({
   messages,
   setMessages,
   regenerate,
+  sendMessage,
   isReadonly,
   selectedModelId: _selectedModelId,
 }: MessagesProps) {
@@ -43,10 +46,48 @@ function PureMessages({
 
   useDataStream();
 
+  const hasMessages = messages.length > 0;
+
+  // Auto-scroll when agent is responding (streaming status)
+  useEffect(() => {
+    if (status === "streaming" && messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
+      });
+    }
+  }, [status, messages, messagesContainerRef]);
+
+  // Also scroll when new assistant message appears
+  useEffect(() => {
+    const lastMessage = messages.at(-1);
+    if (
+      lastMessage?.role === "assistant" &&
+      messagesContainerRef.current &&
+      (status === "streaming" || status === "submitted")
+    ) {
+      const container = messagesContainerRef.current;
+      requestAnimationFrame(() => {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
+      });
+    }
+  }, [messages, status, messagesContainerRef]);
+
   return (
     <div className="relative flex-1">
+      {/* Subtle overlay to highlight active chat area */}
+      {hasMessages && (
+        <div className="absolute inset-0 z-0 bg-gradient-to-b from-background/40 via-background/20 to-background/40" />
+      )}
       <div
-        className="absolute inset-0 touch-pan-y overflow-y-auto"
+        className="absolute inset-0 z-10 touch-pan-y overflow-y-auto"
         ref={messagesContainerRef}
       >
         <div className="mx-auto flex min-w-0 max-w-4xl flex-col gap-4 px-2 py-4 md:gap-6 md:px-4">
@@ -60,13 +101,16 @@ function PureMessages({
                 status === "streaming" && messages.length - 1 === index
               }
               isReadonly={isReadonly}
+              isLastMessage={index === messages.length - 1}
               key={message.id}
               message={message}
               regenerate={regenerate}
               requiresScrollPadding={
                 hasSentMessage && index === messages.length - 1
               }
+              sendMessage={sendMessage}
               setMessages={setMessages}
+              status={status}
               vote={
                 votes
                   ? votes.find((vote) => vote.messageId === message.id)
